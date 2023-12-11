@@ -26,6 +26,8 @@ def bot(prompt):
             prompt_do_sistema = f"""
             Você é um chatbot de atendimento a clientes de um e-commerce.
             Você não deve responder perguntas que não sejam dados do ecommerce informado!
+            ## Dados do ecommerce:
+            {ecommerce_data}   
             """
             response = openai.ChatCompletion.create(
                 messages=[
@@ -61,6 +63,24 @@ def handle_response(prompt: str):
         if len(response_piece):
             partial_response += response_piece
             yield response_piece
+
+def load(nome_do_arquivo):
+    try:
+        with open(nome_do_arquivo, "r") as file:
+            data = file.read()
+            return data
+    except IOError as e:
+        print(f"Erro no carregamento de arquivo: {e}")
+
+def salva(file_name: str, content):
+    try:
+        with open(file_name, "a", encoding="utf-8") as file:
+            file.write(content)
+    except IOError as e:
+        print(f"Erro ao salvar arquivo: {e}")
+
+ecommerce_data = load('dados_ecommerce.txt')
+
 
 @app.route("/")
 def home():
