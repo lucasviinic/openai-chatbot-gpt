@@ -19,6 +19,17 @@ dotenv.load_dotenv()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+def limits_history(history: str, max_token_limit: int) -> str:
+    total_tokens = 0
+    partial_history = ''
+    for line in reversed(history.split('\n')):
+        line_tokens = token_counter(line)
+        total_tokens += line_tokens
+        if total_tokens > max_token_limit:
+            break
+        partial_history = line + partial_history
+    return partial_history
+
 def bot(prompt: str, history: str):
     maxima_repeticao = 1
     repeticao = 0
@@ -33,12 +44,6 @@ def bot(prompt: str, history: str):
             ## Histórico
             {history}
             """
-
-            expected_output_size = 2000
-            total_token_model = 4000
-            if token_counter(prompt_do_sistema) >= total_token_model - expected_output_size:
-                model = "gpt-3.5-turbo-16k"
-
             response = openai.ChatCompletion.create(
                 messages=[
                     {
@@ -68,13 +73,16 @@ def bot(prompt: str, history: str):
 
 def handle_response(prompt: str, history: str, file_name: str):
     partial_response = ''
-    for response in bot(prompt, history):
+    max_token_limit = 2000
+    partial_history = limits_history(history, max_token_limit)
+    for response in bot(prompt, partial_history):
         response_piece = response.choices[0].delta.get('content', '')
         if len(response_piece):
             partial_response += response_piece
             yield response_piece
 
     content = f"""
+    Histórico: {partial_history}
     Usuário: {prompt}
     IA: {partial_response}
     """
@@ -91,7 +99,7 @@ def load(file_name: str):
 
 def save(file_name: str, content: str):
     try:
-        with open(file_name, "a", encoding="utf-8") as file:
+        with open(file_name, "w", encoding="utf-8") as file:
             file.write(content)
     except IOError as e:
         print(f"Erro ao salvar arquivo: {e}")
@@ -103,7 +111,6 @@ def token_counter(prompt: str) -> int:
     return count
 
 ecommerce_data = load('ecommerce_data.txt')
-print(token_counter(ecommerce_data))
 
 @app.route("/")
 def home():
