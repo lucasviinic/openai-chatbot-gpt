@@ -125,5 +125,15 @@ def chat():
         history = load(file_name)
     return Response(handle_response(prompt, history, file_name), mimetype='text/event-stream')
 
+@app.route("/clean-history", methods=['POST'])
+def clean_history():
+    file_name = 'ecomart_history.txt'
+    if os.path.exists(file_name):
+        os.remove(file_name)
+        print("Arquivo removido")
+    else:
+        print("Não foi possível remover esse arquivo.")
+    return {}
+
 if __name__ == "__main__":
     app.run(debug = True)
