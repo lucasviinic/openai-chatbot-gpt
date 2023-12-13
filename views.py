@@ -1,6 +1,7 @@
 from app import app, bot
 from helpers import *
-from flask import render_template, request, Response
+from flask import flash, redirect, render_template, request, Response, session, url_for
+from models import *
 from token_counter import *
 from summarizer import criando_resumo
 import os
@@ -25,12 +26,14 @@ def handle_response(prompt: str, history: str, file_name: str):
 
 @app.route("/")
 def home():
+    if 'usuario_logado' not in session or session['usuario_logado'] == None:
+        return redirect(url_for('login'))
     return render_template("index.html")
 
 @app.route("/chat", methods=['POST'])
 def chat():
     prompt = request.json['msg']
-    file_name = 'ecomart_history.txt'
+    file_name = session['usuario_logado']
     history = ''
     if os.path.exists(file_name):
         history = load(file_name)
@@ -45,3 +48,25 @@ def clean_history():
     else:
         print("Não foi possível remover esse arquivo.")
     return {}
+
+@app.route('/login')
+def login():
+    return render_template('login.html', proxima='/')
+
+@app.route('/autenticar', methods=['POST'])
+def autenticar():
+    if request.form['usuario'] in usuarios:
+        usuario = usuarios[request.form['usuario']]
+        if request.form['senha'] == usuario.senha:
+            session['usuario_logado'] = usuario.nickname
+            flash(usuario.nickname + ' logado com sucesso!')
+            return redirect(request.form['proxima'])
+    else:
+        flash('Usuário não logado.')
+        return redirect(url_for('login'))
+    
+@app.route('/logout')
+def logout():
+    session['usuario_logado'] = None
+    flash('Logout efetuado com sucesso!')
+    return redirect(url_for('login'))
